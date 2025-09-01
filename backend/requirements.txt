@@ -1,0 +1,12 @@
+streamlit
+supabase
+requests
+flask
+python-dotenv
+pytest
+transformers
+PyPDF2
+intasend-python
+python-docx
+fastapi
+uvicorn[standard]
