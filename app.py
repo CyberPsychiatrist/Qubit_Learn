@@ -2,6 +2,9 @@
 import streamlit as st
 from components.login_form import render_login_form, render_register_form
 from components.dashboard import render_dashboard
+from components.paraphrase_qg import render_paraphrase_qg   # ✅ already added earlier
+from components.paraphraser import render_paraphraser       # ✅ new import
+
 
 # -------------------- APP ENTRY --------------------
 def main():
@@ -13,14 +16,17 @@ def main():
     if "user" not in st.session_state:
         st.session_state.user = {}
 
-    # Navigation
-    menu = ["Login", "Register", "Dashboard"]
-    if st.session_state.authenticated:
-        choice = "Dashboard"
-    else:
-        choice = st.sidebar.selectbox("Navigation", menu[:-1])  # no Dashboard if not logged in
+    # Navigation menu
+    menu = ["Login", "Register", "Dashboard", "Paraphrase", "Paraphrase & QG"]
 
-    # Pages
+    if st.session_state.authenticated:
+        # Show only Dashboard + Paraphrase pages when logged in
+        choice = st.sidebar.selectbox("Navigation", menu[2:])
+    else:
+        # Only Login + Register when not logged in
+        choice = st.sidebar.selectbox("Navigation", menu[:2])
+
+    # Routing
     if choice == "Login":
         render_login_form()
 
@@ -32,6 +38,20 @@ def main():
             render_dashboard(st.session_state.user)
         else:
             st.warning("Please log in to access your dashboard.")
+            render_login_form()
+
+    elif choice == "Paraphrase":
+        if st.session_state.authenticated and st.session_state.user:
+            render_paraphraser()
+        else:
+            st.warning("Please log in to use the paraphraser.")
+            render_login_form()
+
+    elif choice == "Paraphrase & QG":
+        if st.session_state.authenticated and st.session_state.user:
+            render_paraphrase_qg()
+        else:
+            st.warning("Please log in to access Paraphrase & QG.")
             render_login_form()
 
 

@@ -10,7 +10,7 @@
 
 ## 🌍 Overview
 
-This project is a **QUBit\_Learn application** designed to support **United Nations Sustainable Development Goal (SDG) 4: Quality Education**.
+This project is a **Qubit\_Learn application** designed to support **United Nations Sustainable Development Goal (SDG) 4: Quality Education**.
 
 The app empowers **policymakers, educators, researchers, and students** to:
 
@@ -25,26 +25,26 @@ By making education data **accessible, interactive, and actionable**, the app co
 
 ## 🚀 Live Demo
 
-👉 Try the app here: [**Live Demo on Streamlit Cloud**](https://qubitlearn-kxebpovzf9cxzaruz2xktu.streamlit.app/)
+👉 Try the app here: [**Live Demo on Streamlit Cloud**](https://qubitlearn-3znkduqhrxazap3uxq6ee6.streamlit.app/)
 
 ---
 
 ## 🖼️ Screenshots
 
-* **Home**
-  ![Home Page Screenshot](assets/home.png)
+* **Login**
+  ![Login Page Screenshot](assets/login.png)
 
-* **Dashboard**
-  ![Dashboard Screenshot](assets/dashboard.png)
+* **Paraphraser**
+  ![Paraphraser Screenshot](assets/paraphraser.png)
 
   * **Dashboard**
-  ![Dashboard Screenshot](assets/dashboard2.png)
+  ![Generate Quizes Screenshot](assets/generatequiz.png)
 
-* **Login**
-  ![Login Screenshot](assets/login.png)
+* **Donate**
+  ![Donate Screenshot](assets/Donations.png)
 
 * **Upload Files**
-  ![Upload materials Screenshot](assets/Upload.png)
+  ![Upload Study materials Screenshot](assets/fileuploader.png)
 
 
 ---
@@ -134,7 +134,7 @@ This project aligns with **SDG 4: Quality Education** by making education data a
 
 ```bash
 # 1. Clone the repository
-git clone https://github.com/CyberPsychiatrist/QubitLearn.git
+git clone https://github.com/CyberPsychiatrist/Qubit_Learn.git
 cd QubitLearn
 
 # 2a. (Option A) Create and activate a Python virtual environment

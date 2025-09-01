@@ -1,53 +1,37 @@
 # components/helpers.py
-import os
-import requests
 import PyPDF2
 import docx
-
-# Hugging Face API Config
-HUGGING_FACE_API_KEY = os.getenv("HUGGING_FACE_API_KEY")
-PARAPHRASER_URL = "https://api-inference.huggingface.co/models/Vamsi/T5_Paraphrase_Paws"
-headers = {"Authorization": f"Bearer {HUGGING_FACE_API_KEY}"}
+from src.ai_processor import paraphrase_text, generate_questions
 
 
 # =============== Paraphraser =================
-def paraphrase_text(text, num_return_sequences=3, max_length=128):
-    """Generate paraphrased sentences using Hugging Face API."""
-    payload = {
-        "inputs": f"paraphrase: {text}",
-        "parameters": {
-            "num_return_sequences": num_return_sequences,
-            "max_length": max_length,
-        },
-    }
-    response = requests.post(PARAPHRASER_URL, headers=headers, json=payload)
-    if response.status_code == 200:
-        return [r["generated_text"] for r in response.json()]
-    else:
-        return [f"Error: {response.text}"]
+def paraphrase_text_from_api(text: str, num_return_sequences: int = 3, max_length: int = 128):
+    """Generate paraphrases using ai_processor."""
+    return paraphrase_text(text, num_return_sequences=num_return_sequences, max_new_tokens=max_length)
+
+
+def generate_questions_from_api(text: str, max_questions: int = 5, max_new_tokens: int = 96):
+    """Generate questions using ai_processor."""
+    return generate_questions(text, max_questions=max_questions, max_new_tokens=max_new_tokens)
 
 
 # =============== File Handlers =================
-def extract_text_from_pdf(uploaded_file):
+def extract_text_from_pdf(uploaded_file) -> str:
     reader = PyPDF2.PdfReader(uploaded_file)
-    text = ""
-    for page in reader.pages:
-        text += page.extract_text() or ""
-    return text.strip()
+    return "".join([page.extract_text() or "" for page in reader.pages]).strip()
 
 
-def extract_text_from_docx(uploaded_file):
+def extract_text_from_docx(uploaded_file) -> str:
     doc = docx.Document(uploaded_file)
-    text = "\n".join([p.text for p in doc.paragraphs if p.text])
-    return text.strip()
+    return "\n".join([p.text for p in doc.paragraphs if p.text]).strip()
 
 
-def extract_text_from_txt(uploaded_file):
+def extract_text_from_txt(uploaded_file) -> str:
     return uploaded_file.read().decode("utf-8").strip()
 
 
-def handle_file_upload(uploaded_file):
-    """Handle text extraction from different file formats."""
+def handle_file_upload(uploaded_file) -> str:
+    """Handle text extraction from txt, pdf, and docx files."""
     if uploaded_file.type == "text/plain":
         return extract_text_from_txt(uploaded_file)
     elif uploaded_file.type == "application/pdf":
@@ -57,5 +41,4 @@ def handle_file_upload(uploaded_file):
         "application/msword",
     ]:
         return extract_text_from_docx(uploaded_file)
-    else:
-        return ""
+    return ""

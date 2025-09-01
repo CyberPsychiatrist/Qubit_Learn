@@ -3,7 +3,7 @@ import streamlit as st
 from src.database import get_user_flashcards, get_user_data, save_flashcards, update_user_profile
 from src.ai_processor import generate_questions, paraphrase_text
 from components.upload_section import render_upload_section
-from components.donate import render_donate_tab
+from components.donate import render_donate_section
 
 # -------------------- FLASHCARDS --------------------
 def generate_flashcards(passage: str):
@@ -76,7 +76,8 @@ def user_profile(user_id):
 
 # -------------------- MAIN DASHBOARD --------------------
 def render_dashboard(user: dict):
-    st.title(f"📚 Welcome, {user.get('email', 'Learner')}")
+    st.title(f"📚 Welcome, Student")
+    st.subheader("🧠 Use Navigation drop-down to test Integrated Tools")
 
     tab1, tab2, tab3, tab4, tab5, tab6 ,tab7 = st.tabs([
         "📄 Upload",
@@ -130,7 +131,7 @@ def render_dashboard(user: dict):
 
     # Donate
     with tab7:
-        render_donate_tab(user.get("email"))
+        render_donate_section(user.get("email"))
 
     # Sidebar
     st.sidebar.success("✅ You are logged in")

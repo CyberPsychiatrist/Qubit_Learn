@@ -10,3 +10,5 @@ intasend-python
 python-docx
 fastapi
 uvicorn[standard]
+pydantic
+huggingface-hub
