@@ -9,4 +9,4 @@ PyPDF2
 intasend-python
 python-docx
 fastapi
-[uvicorn[standard]
+uvicorn[standard]

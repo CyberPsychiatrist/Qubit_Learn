@@ -1,7 +1,0 @@
-fastapi
-uvicorn[standard]
-intasend
-python-dotenv
-supabase
-requests
-flask
