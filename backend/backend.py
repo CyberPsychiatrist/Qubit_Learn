@@ -57,7 +57,11 @@ def sanitize_api_ref(text: str) -> str:
 # ----------- Schemas -----------
 class STKDonationRequest(BaseModel):
     email: EmailStr
-    phone: str = Field(..., regex=r"^2547\d{8}$", description="Safaricom MSISDN format e.g. 254712345678")
+    phone: str = Field(
+        ...,
+        pattern=r"^2547\d{8}$",  # ✅ fixed: regex -> pattern
+        description="Safaricom MSISDN format e.g. 254712345678"
+    )
     amount: float = Field(gt=0)
     note: Optional[str] = None
     currency: str = "KES"  # STK is KES only
