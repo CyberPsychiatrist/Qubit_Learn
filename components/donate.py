@@ -8,7 +8,7 @@ from dotenv import load_dotenv
 load_dotenv()
 
 # ✅ Backend URL (from env or default to localhost)
-BACKEND_URL = os.getenv("BACKEND_URL", "http://127.0.0.1:8000")
+BACKEND_URL = os.getenv("BACKEND_URL", "https://qubit-learn.onrender.com")
 
 
 def render_donate_section(user_email: str):
