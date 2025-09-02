@@ -9,6 +9,6 @@ PyPDF2
 intasend-python
 python-docx
 huggingface-hub
-pydantic
+pydantic[email]
 fastapi
 uvicorn[standard]
