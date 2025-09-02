@@ -21,7 +21,7 @@ if not INTASEND_SECRET_TOKEN or not INTASEND_PUBLISHABLE_KEY:
 
 # Supabase creds
 SUPABASE_URL = os.getenv("SUPABASE_URL")
-SUPABASE_KEY = os.getenv("SUPABASE_KEY")  # Prefer service role key on backend
+SUPABASE_KEY = os.getenv("SUPABASE_SERVICE_ROLE_KEY") or os.getenv("SUPABASE_KEY")
 if not SUPABASE_URL or not SUPABASE_KEY:
     raise RuntimeError("❌ Missing SUPABASE_URL or SUPABASE_KEY in environment.")
 
@@ -50,13 +50,14 @@ app.add_middleware(
 
 # ----------- Helper -----------
 def sanitize_api_ref(text: str) -> str:
-    """Replace disallowed characters with '-' (IntaSend only allows letters, numbers, _, -, space)."""
-    return re.sub(r"[^a-zA-Z0-9_\- ]", "-", text)
+    """Make api_ref safe for IntaSend: letters, numbers, _, -, space only. Max 30 chars."""
+    clean = re.sub(r"[^a-zA-Z0-9_\- ]", "-", text)
+    return clean[:30]
 
 # ----------- Schemas -----------
 class STKDonationRequest(BaseModel):
     email: EmailStr
-    phone: str = Field(..., description="MSISDN format, e.g. 2547XXXXXXXX")
+    phone: str = Field(..., regex=r"^2547\d{8}$", description="Safaricom MSISDN format e.g. 254712345678")
     amount: float = Field(gt=0)
     note: Optional[str] = None
     currency: str = "KES"  # STK is KES only
@@ -66,21 +67,21 @@ class CheckoutDonationRequest(BaseModel):
     amount: float = Field(gt=0)
     currency: str = Field(default="USD", description="USD or KES")
 
-
 # ----------- Routes -----------
 @app.get("/health")
 def health():
     return {"ok": True, "intasend_test_mode": TEST_MODE}
 
-
 @app.post("/donate/mpesa-stk")
 def donate_mpesa_stk(body: STKDonationRequest):
     try:
-        api_ref = sanitize_api_ref(f"don-{body.email}-kes-{int(body.amount*100)}")
+        # Short api_ref using email prefix only
+        email_prefix = body.email.split("@")[0]
+        api_ref = sanitize_api_ref(f"don-{email_prefix}-{int(body.amount*100)}")
 
         resp = service.collect.mpesa_stk_push(
             amount=body.amount,
-            phone_number=body.phone,
+            phone_number=body.phone.strip(),
             api_ref=api_ref,
             email=body.email,
             narrative=body.note or "Donation"
@@ -113,11 +114,11 @@ def donate_mpesa_stk(body: STKDonationRequest):
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
 
-
 @app.post("/donate/checkout")
 def donate_checkout(body: CheckoutDonationRequest):
     try:
-        api_ref = sanitize_api_ref(f"don-{body.email}-{body.currency.lower()}-{int(body.amount*100)}")
+        email_prefix = body.email.split("@")[0]
+        api_ref = sanitize_api_ref(f"don-{email_prefix}-{body.currency.lower()}-{int(body.amount*100)}")
 
         resp = service.collect.checkout(
             amount=body.amount,
@@ -153,7 +154,6 @@ def donate_checkout(body: CheckoutDonationRequest):
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
 
-
 @app.get("/donations/{donation_id}")
 def donation_status(donation_id: str):
     row = db.get_donation_by_id(donation_id)
@@ -161,12 +161,10 @@ def donation_status(donation_id: str):
         raise HTTPException(status_code=404, detail="Donation not found")
     return {"ok": True, "donation": row}
 
-
 @app.get("/donations")
 def donations_by_email(email: EmailStr):
     rows = db.get_donations(email)
     return {"ok": True, "donations": rows}
-
 
 @app.post("/webhook/intasend")
 async def intasend_webhook(request: Request):
