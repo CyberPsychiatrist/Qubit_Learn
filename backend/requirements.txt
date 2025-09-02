@@ -8,7 +8,7 @@ transformers
 PyPDF2
 intasend-python
 python-docx
+huggingface-hub
+pydantic[email]
 fastapi
 uvicorn[standard]
-pydantic
-huggingface-hub
