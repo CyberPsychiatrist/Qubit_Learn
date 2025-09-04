@@ -40,6 +40,9 @@ By making education data **accessible, interactive, and actionable**, the app co
   * **Dashboard**
   ![Generate Quizes Screenshot](assets/generatequiz.png)
 
+* **Support_Mission**
+  ![Mission Screenshot](assets/mission.png)
+
 * **Donate**
   ![Donate Screenshot](assets/Donations.png)
 
