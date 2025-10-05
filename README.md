@@ -156,6 +156,7 @@ pip install -r requirements.txt
 cd backend
 uvicorn backend:app --reload --host 127.0.0.1 --port 8000
 
+
 # 4. Run the app
 streamlit run app.py
 ```

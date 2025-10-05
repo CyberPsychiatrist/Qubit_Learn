@@ -71,3 +71,19 @@ class SupaDB:
         if hasattr(res, "error") and res.error:
             raise RuntimeError(f"❌ Supabase fetch error: {res.error}")
         return res.data or []
+
+    # ----- Users -----
+    def save_user(self, user_id, email, username, full_name):
+        try:
+            # Check if user already exists
+            response = self.client.table("users").select("id").eq("id", user_id).execute()
+            if not response.data:
+                self.client.table("users").insert({
+                    "id": user_id,
+                    "email": email,
+                    "username": username,
+                    "full_name": full_name
+                }).execute()
+        except Exception as e:
+            print(f"Error saving user: {e}")
+            raise e
