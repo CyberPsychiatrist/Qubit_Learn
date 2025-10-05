@@ -10,7 +10,14 @@
   "routes": [
     {
       "src": "/(.*)",
-      "dest": "app.py"
+      "dest": "run_frontend.py"
     }
   ]
+}
+{
+  "buildCommand": "echo 'Frontend is static, no build needed'",
+  "outputDirectory": "static",
+  "env": {
+    "BACKEND_URL": "https://your-production-backend-url.com"
+  }
 }
