@@ -12,3 +12,6 @@ huggingface-hub
 pydantic[email]
 fastapi
 uvicorn[standard]
+python-multipart
+starlette
+jinja2
