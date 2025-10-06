@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Qubit Learn - Flashcards</title>
+    <link rel="stylesheet" href="/static/css/style.css">
+</head>
+<body>
+    <header>
+        <h1>Flashcards</h1>
+        <nav>
+            <a href="/">Home</a>
+            <a href="/dashboard">Dashboard</a>
+            <a href="/donate">Donate</a>
+            <a href="/upload">Upload</a>
+        </nav>
+    </header>
+    <main>
+        <section class="flashcards-section" style="display: flex; flex-wrap: wrap; gap: 2rem; justify-content: space-between;">
+            <!-- Your Cards -->
+            <div style="flex: 1 1 300px; min-width: 280px; max-width: 32%;">
+                <h2>Your Cards</h2>
+                <div id="flashcardContainer">
+                    <!-- Flashcards will be dynamically loaded here -->
+                </div>
+            </div>
+            <!-- Add New Card -->
+            <div style="flex: 1 1 300px; min-width: 280px; max-width: 32%; border-left: 1px solid #eee; padding-left: 1rem;">
+                <h2>Add New Card</h2>
+                <form id="flashcardForm">
+                    <label>Question:<br><input type="text" name="question" required></label><br>
+                    <label>Answer:<br><input type="text" name="answer" required></label><br>
+                    <button type="submit">Add Flashcard</button>
+                </form>
+                <div id="flashcardMsg" style="margin-top:1em;"></div>
+            </div>
+            <!-- AI-Powered Generator -->
+            <div style="flex: 1 1 300px; min-width: 280px; max-width: 32%; border-left: 1px solid #eee; padding-left: 1rem;">
+                <h2>AI-Powered Generator</h2>
+                <form id="questionGenForm">
+                    <textarea name="text" rows="3" cols="40" placeholder="Paste text to generate questions" required></textarea><br>
+                    <label>Number of Questions: <input type="number" name="max_questions" value="5" min="1" max="10"></label><br>
+                    <button type="submit">Generate Questions</button>
+                </form>
+                <div id="questionResults" style="margin-top:1em;"></div>
+            </div>
+        </section>
+    </main>
+    <script>
+    async function loadFlashcards() {
+        const res = await fetch('/api/flashcards');
+        const data = await res.json();
+        const container = document.getElementById('flashcardContainer');
+        if (data.flashcards && data.flashcards.length > 0) {
+            container.innerHTML = '<ul>' + data.flashcards.map(card => `<li><strong>Q:</strong> ${card.question}<br><strong>A:</strong> ${card.answer}</li>`).join('') + '</ul>';
+        } else {
+            container.innerHTML = '<em>No flashcards found.</em>';
+        }
+    }
+
+    // Add flashcard form handler
+    document.getElementById('flashcardForm').onsubmit = async function(e) {
+        e.preventDefault();
+        document.getElementById('flashcardMsg').innerText = '';
+        const formData = new FormData(this);
+        const payload = {
+            question: formData.get('question'),
+            answer: formData.get('answer')
+        };
+        const res = await fetch('/api/flashcards', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify([payload])
+        });
+        const data = await res.json();
+        if (data.ok) {
+            document.getElementById('flashcardMsg').innerText = 'Flashcard added!';
+            this.reset();
+            loadFlashcards();
+        } else {
+            document.getElementById('flashcardMsg').innerText = 'Error: ' + (data.error || 'Could not add flashcard.');
+        }
+    };
+
+    // AI-powered question generation form handler
+    document.getElementById('questionGenForm').onsubmit = async function(e) {
+        e.preventDefault();
+        document.getElementById('questionResults').innerText = '';
+        const formData = new FormData(this);
+        const res = await fetch('/api/questions', { method: 'POST', body: formData });
+        const data = await res.json();
+        if (data.questions) {
+            document.getElementById('questionResults').innerHTML = '<ul>' + data.questions.map(q => `<li>${q}</li>`).join('') + '</ul>';
+        } else {
+            document.getElementById('questionResults').innerText = 'No questions generated.';
+        }
+    };
+
+    // Load flashcards on page load
+    loadFlashcards();
+    </script>
+</body>
+</html>

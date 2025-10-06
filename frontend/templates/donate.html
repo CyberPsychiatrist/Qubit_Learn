@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Qubit Learn - Donate</title>
+    <link rel="stylesheet" href="/static/css/style.css">
+</head>
+<body>
+    <header>
+        <h1>Support Qubit Learn</h1>
+        <nav>
+            <a href="/">Home</a>
+            <a href="/dashboard">Dashboard</a>
+            <a href="/upload">Upload</a>
+            <a href="/flashcards">Flashcards</a>
+        </nav>
+    </header>
+    <main>
+        <section class="donate-section">
+            <h2>Make a Donation</h2>
+      <form id="donateForm">
+        <label>Amount (KES): <input type="number" name="amount" placeholder="Amount" required></label><br>
+        <label>Email: <input type="email" name="email" placeholder="Email" required></label><br>
+        <label>Phone (for M-Pesa): <input type="tel" name="phone" placeholder="Phone"></label><br>
+        <label>Payment Method:
+          <select name="method">
+            <option value="card">Card</option>
+            <option value="mpesa">M-Pesa</option>
+          </select>
+        </label><br>
+        <button type="submit">Donate</button>
+      </form>
+      <div id="donateError" style="color:red;margin-top:1em;"></div>
+      <script>
+      document.getElementById('donateForm').onsubmit = async function(e) {
+        e.preventDefault();
+        document.getElementById('donateError').innerText = '';
+        const formData = new FormData(this);
+        try {
+          const res = await fetch('/api/initiate_payment', { method: 'POST', body: formData });
+          const data = await res.json();
+          if (data.checkout_url) {
+            window.location.href = data.checkout_url; // Card payment
+          } else if (data.status === 'PENDING') {
+            alert('STK Push sent! Complete payment on your phone.');
+          } else if (data.error) {
+            if (data.error.includes('authentication token is required')) {
+              document.getElementById('donateError').innerText = 'Payment failed: IntaSend authentication token is missing or invalid. Please contact support.';
+            } else {
+              document.getElementById('donateError').innerText = 'Error: ' + data.error;
+            }
+          } else {
+            document.getElementById('donateError').innerText = 'Unknown error occurred.';
+          }
+        } catch (err) {
+          document.getElementById('donateError').innerText = 'Network or server error.';
+        }
+      };
+      </script>
+</body>
+</html>
