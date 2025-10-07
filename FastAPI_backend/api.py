@@ -1,11 +1,11 @@
 from fastapi import APIRouter, Request, UploadFile, File, Form, HTTPException
 from fastapi.responses import RedirectResponse, JSONResponse
 from typing import Optional
-from src.ai_processor import paraphrase_text, generate_questions
-from FastAPI_backend.db import SupaDB
 import os, pandas as pd, tempfile
 from pathlib import Path
 
+from ai_processor import paraphrase_text, generate_questions
+from db import SupaDB
 # --- Supabase setup ---
 SUPABASE_URL = os.getenv("SUPABASE_URL")
 SUPABASE_KEY = os.getenv("SUPABASE_SERVICE_ROLE_KEY") or os.getenv("SUPABASE_KEY")
