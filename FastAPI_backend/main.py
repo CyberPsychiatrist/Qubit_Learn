@@ -12,9 +12,22 @@ from pydantic import BaseModel, EmailStr, Field
 import requests
 import os
 import re
+import logging
+import sys
 from api import router as api_router
 from dotenv import load_dotenv
 from intasend import APIService
+
+# Configure logging
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+    handlers=[
+        logging.StreamHandler(sys.stdout),
+        logging.FileHandler('app.log')
+    ]
+)
+logger = logging.getLogger(__name__)
 
 
 # Load environment variables
@@ -89,10 +102,24 @@ db = SupaDB(
 static_dir = FRONTEND_STATIC_DIR
 templates_dir = TEMPLATES_DIR
 
+# Log directory information
+logger.info(f"Static directory path: {static_dir}")
+logger.info(f"Static directory exists: {static_dir.exists()}")
+logger.info(f"Templates directory path: {templates_dir}")
+logger.info(f"Templates directory exists: {templates_dir.exists()}")
+
 if static_dir.exists():
     app.mount("/static", StaticFiles(directory=str(static_dir)), name="static")
+    logger.info("Static files mounted successfully")
+else:
+    logger.warning(f"Static directory not found: {static_dir}")
 
-templates = Jinja2Templates(directory=str(templates_dir))
+if templates_dir.exists():
+    templates = Jinja2Templates(directory=str(templates_dir))
+    logger.info("Templates initialized successfully")
+else:
+    logger.error(f"Templates directory not found: {templates_dir}")
+    raise RuntimeError(f"Templates directory not found: {templates_dir}")
 
 
 # ------------------- HELPERS ------------------- #
@@ -426,9 +453,37 @@ async def donate_checkout(body: CheckoutDonationRequest):
     
 @app.get("/health")
 def health_check():
-    return {"status": "ok", "service": "QubitLearn Backend"}
+    """Health check endpoint for Railway monitoring"""
+    try:
+        # Check if directories exist
+        static_exists = static_dir.exists()
+        templates_exists = templates_dir.exists()
+        
+        # Check if we can access templates
+        templates_accessible = False
+        if templates_exists:
+            try:
+                templates.env.loader.get_source(templates.env, "index.html")
+                templates_accessible = True
+            except Exception as e:
+                logger.error(f"Templates access error: {e}")
+        
+        return {
+            "status": "ok",
+            "service": "QubitLearn Backend",
+            "static_files": static_exists,
+            "templates": templates_exists,
+            "templates_accessible": templates_accessible,
+            "static_path": str(static_dir),
+            "templates_path": str(templates_dir)
+        }
+    except Exception as e:
+        logger.error(f"Health check failed: {e}")
+        return {"status": "error", "message": str(e)}
 
 
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run("main:app", host="0.0.0.0", port=int(os.getenv("PORT", 8000)))
+    port = int(os.getenv("PORT", 8000))
+    logger.info(f"Starting server on port {port}")
+    uvicorn.run("main:app", host="0.0.0.0", port=port)

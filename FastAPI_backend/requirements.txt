@@ -1,7 +1,5 @@
-streamlit
 supabase
 requests
-flask
 python-dotenv
 pytest
 transformers
@@ -15,3 +13,5 @@ uvicorn[standard]
 python-multipart
 starlette
 jinja2
+aiofiles
+python-multipart
