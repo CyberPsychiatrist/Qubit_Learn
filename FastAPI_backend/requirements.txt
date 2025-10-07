@@ -1,0 +1,17 @@
+streamlit
+supabase
+requests
+flask
+python-dotenv
+pytest
+transformers
+PyPDF2
+intasend-python
+python-docx
+huggingface-hub
+pydantic[email]
+fastapi
+uvicorn[standard]
+python-multipart
+starlette
+jinja2
