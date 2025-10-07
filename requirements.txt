@@ -16,3 +16,4 @@ python-multipart
 starlette
 jinja2
 itsdangerous
+pandas

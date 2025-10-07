@@ -16,3 +16,4 @@ jinja2
 aiofiles
 python-multipart
 itsdangerous
+pandas
