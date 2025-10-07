@@ -21,30 +21,43 @@ async def login(
     password: str = Form(...)
 ):
     """Handles user login via HTML form."""
-    user = db.login_user(email, password)
-    if not user:
-        return JSONResponse(
-            {"error": "Invalid credentials or email not verified."},
+    from fastapi.templating import Jinja2Templates
+    from pathlib import Path
+    FRONTEND_DIR = Path(__file__).resolve().parents[1] / "frontend"
+    templates = Jinja2Templates(directory=str(FRONTEND_DIR / "templates"))
+    try:
+        user = db.login_user(email, password)
+        if not user:
+            return templates.TemplateResponse(
+                "login.html",
+                {"request": request, "error": "Invalid email or password. Please try again."},
+                status_code=401
+            )
+
+        profile = db.get_user(user["id"])
+        if not profile:
+            return templates.TemplateResponse(
+                "login.html",
+                {"request": request, "error": "User profile not found after login."},
+                status_code=404
+            )
+
+        # Save user session
+        request.session["user"] = {
+            "id": profile.get("id"),
+            "email": email,
+            "username": profile.get("username"),
+            "full_name": profile.get("full_name")
+        }
+
+        # Render dashboard instead of redirect
+        return RedirectResponse(url="/dashboard", status_code=302)
+    except Exception as e:
+        return templates.TemplateResponse(
+            "login.html",
+            {"request": request, "error": "Invalid email or password. Please try again."},
             status_code=401
         )
-
-    profile = db.get_user(user["id"])
-    if not profile:
-        return JSONResponse(
-            {"error": "User profile not found after login."},
-            status_code=404
-        )
-
-    # Save user session
-    request.session["user"] = {
-        "id": profile.get("id"),
-        "email": email,
-        "username": profile.get("username"),
-        "full_name": profile.get("full_name")
-    }
-
-    # Redirect to dashboard after login
-    return RedirectResponse(url="/dashboard", status_code=302)
 
 
 # ---------------- SIGNUP ---------------- #
@@ -91,20 +104,23 @@ async def api_questions(text: str = Form(...), max_questions: int = Form(5)):
 
 
 # ---------------- FLASHCARDS ---------------- #
-@router.get("/api/flashcards")
-def get_flashcards(user_id: str):
-    cards = db.get_user_flashcards(user_id)
-    return {"flashcards": cards}
-
-
-@router.post("/api/flashcards")
-def add_flashcard(
-    user_id: str = Form(...),
-    question: str = Form(...),
-    answer: str = Form(...)
-):
-    db.save_flashcards([{"question": question, "answer": answer}], user_id)
-    return {"ok": True}
+# Note: Flashcard endpoints are now handled in main.py
+# to avoid conflicts with user session management
+#
+# @router.get("/api/flashcards")
+# def get_flashcards(user_id: str):
+#     cards = db.get_user_flashcards(user_id)
+#     return {"flashcards": cards}
+#
+#
+# @router.post("/api/flashcards")
+# def add_flashcard(
+#     user_id: str = Form(...),
+#     question: str = Form(...),
+#     answer: str = Form(...)
+# ):
+#     db.save_flashcards([{"question": question, "answer": answer}], user_id)
+#     return {"ok": True}
 
 
 # ---------------- USER PROFILE ---------------- #

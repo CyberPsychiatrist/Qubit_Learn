@@ -28,6 +28,18 @@ class SupaDB:
             return True, getattr(res, "data", None)
         except Exception as e:
             return False, f"Insert error: {e}"
+    
+    def get_all_cards(self) -> List[Dict[str, Any]]:
+        """
+        Fetch all flashcards from public.cards table.
+        Returns list of card dictionaries.
+        """
+        try:
+            res = self.client.table("cards").select("*").execute()
+            return getattr(res, "data", [])
+        except Exception as e:
+            print(f"❌ Error fetching cards: {e}")
+            return []
     def __init__(self, url: str, key: str):
         self.client: Client = create_client(url, key)
 
