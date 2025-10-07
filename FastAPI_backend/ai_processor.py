@@ -29,7 +29,14 @@ DEFAULT_QG = "t5-simple"
 # ============================
 
 try:
-    from config.settings import HUGGING_FACE_API_KEY as _HF_TOKEN_FROM_SETTINGS
+    try:
+        from config.settings import HUGGING_FACE_API_KEY as _HF_TOKEN_FROM_SETTINGS
+    except ImportError:
+        # Fallback to root level config if not found in current directory
+        import sys
+        import os
+        sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+        from config.settings import HUGGING_FACE_API_KEY as _HF_TOKEN_FROM_SETTINGS
 except Exception:
     _HF_TOKEN_FROM_SETTINGS = None
 

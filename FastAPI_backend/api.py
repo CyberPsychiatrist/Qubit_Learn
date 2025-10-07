@@ -4,8 +4,8 @@ from typing import Optional
 import os, pandas as pd, tempfile
 from pathlib import Path
 
-from ai_processor import paraphrase_text, generate_questions
-from db import SupaDB
+from .ai_processor import paraphrase_text, generate_questions
+from .db import SupaDB
 # --- Supabase setup ---
 SUPABASE_URL = os.getenv("SUPABASE_URL")
 SUPABASE_KEY = os.getenv("SUPABASE_SERVICE_ROLE_KEY") or os.getenv("SUPABASE_KEY")

@@ -14,7 +14,7 @@ import os
 import re
 import logging
 import sys
-from api import router as api_router
+from .api import router as api_router
 from dotenv import load_dotenv
 from intasend import APIService
 
@@ -34,7 +34,7 @@ logger = logging.getLogger(__name__)
 load_dotenv()
 
 # Import DB
-from db import SupaDB
+from .db import SupaDB
 
 # IntaSend credentials
 INTASEND_SECRET_TOKEN = os.getenv("INTASEND_SECRET_TOKEN")
