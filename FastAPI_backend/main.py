@@ -46,8 +46,11 @@ def sanitize_api_ref(text: str) -> str:
 
 # Base paths
 BASE_DIR = Path(__file__).resolve().parent
-ROOT_DIR = BASE_DIR.parent
-FRONTEND_DIR = ROOT_DIR / "frontend"
+STATIC_DIR = BASE_DIR / "static"
+TEMPLATES_DIR = BASE_DIR / "templates"
+
+# For frontend static files (CSS, JS)
+FRONTEND_STATIC_DIR = BASE_DIR / "frontend" / "static"
 
 # Pydantic models for requests
 class STKDonationRequest(BaseModel):
@@ -83,8 +86,8 @@ db = SupaDB(
 )
 
 # Static + Templates setup
-static_dir = FRONTEND_DIR / "static"
-templates_dir = FRONTEND_DIR / "templates"
+static_dir = FRONTEND_STATIC_DIR
+templates_dir = TEMPLATES_DIR
 
 if static_dir.exists():
     app.mount("/static", StaticFiles(directory=str(static_dir)), name="static")
