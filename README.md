@@ -25,7 +25,7 @@ By making education data **accessible, interactive, and actionable**, the app co
 
 ## 🚀 Live Demo
 
-👉 Try the app here: [**Live Demo on Streamlit Cloud**](https://qubitlearn-3znkduqhrxazap3uxq6ee6.streamlit.app/)
+👉 Try the app here: [**Live Demo on Streamlit Cloud**](https://qubit-learn.onrender.com/)
 
 ---
 

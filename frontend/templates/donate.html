@@ -35,26 +35,95 @@
       <script>
       document.getElementById('donateForm').onsubmit = async function(e) {
         e.preventDefault();
-        document.getElementById('donateError').innerText = '';
-        const formData = new FormData(this);
+        const errorDiv = document.getElementById('donateError');
+        errorDiv.innerText = '';
+        
+        // Show loading state
+        const submitBtn = this.querySelector('button[type="submit"]');
+        const originalText = submitBtn.textContent;
+        submitBtn.textContent = 'Processing...';
+        submitBtn.disabled = true;
+
+        const form = this;
+        const amount = form.amount.value;
+        const email = form.email.value;
+        const phone = form.phone.value;
+        const method = form.method.value;
+
         try {
-          const res = await fetch('/api/initiate_payment', { method: 'POST', body: formData });
-          const data = await res.json();
-          if (data.checkout_url) {
-            window.location.href = data.checkout_url; // Card payment
-          } else if (data.status === 'PENDING') {
-            alert('STK Push sent! Complete payment on your phone.');
-          } else if (data.error) {
-            if (data.error.includes('authentication token is required')) {
-              document.getElementById('donateError').innerText = 'Payment failed: IntaSend authentication token is missing or invalid. Please contact support.';
-            } else {
-              document.getElementById('donateError').innerText = 'Error: ' + data.error;
+          let res, data;
+
+          if (method === 'card') {
+            console.log('Sending card payment request...');
+            res = await fetch('/donate/checkout', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ amount: parseFloat(amount), email, currency: 'KES' })
+            });
+            data = await res.json();
+            console.log("Card payment response:", data);
+            
+            if (!res.ok) {
+              throw new Error(data.detail || data.error || 'Card payment failed');
             }
-          } else {
-            document.getElementById('donateError').innerText = 'Unknown error occurred.';
+            
+            if (data.checkout_url) {
+              console.log("Redirecting to checkout URL:", data.checkout_url);
+              window.location.href = data.checkout_url;
+              return;
+            } else {
+              throw new Error('No checkout URL received from payment processor');
+            }
+          } else if (method === 'mpesa') {
+            if (!phone) {
+              throw new Error('Phone number is required for M-Pesa payment');
+            }
+            
+            console.log('Sending M-Pesa STK request...');
+            res = await fetch('/donate/mpesa-stk', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ amount: parseFloat(amount), email, phone, currency: 'KES' })
+            });
+            data = await res.json();
+            console.log("M-Pesa payment response:", data);
+            
+            if (!res.ok) {
+              throw new Error(data.detail || data.error || 'M-Pesa payment failed');
+            }
+            
+            if (data.status === 'PENDING') {
+              alert('STK Push sent! Complete payment on your phone.');
+              // Reset form
+              form.reset();
+              return;
+            } else {
+              throw new Error('M-Pesa payment request did not return expected status');
+            }
           }
+
+          // If we get here, there was an unexpected response
+          throw new Error('Unexpected payment response');
+
         } catch (err) {
-          document.getElementById('donateError').innerText = 'Network or server error.';
+          console.error("Payment error:", err);
+          let errorMessage = err.message || 'Payment failed. Please try again.';
+          
+          // Handle specific error messages
+          if (errorMessage.includes('authentication token')) {
+            errorMessage = 'Payment service error: Please contact support if this persists.';
+          } else if (errorMessage.includes('missing fields')) {
+            errorMessage = 'Payment service error: Invalid payment parameters.';
+          } else if (errorMessage.includes('network')) {
+            errorMessage = 'Network error: Please check your connection and try again.';
+          }
+          
+          errorDiv.innerText = errorMessage;
+          errorDiv.style.color = '#dc3545';
+        } finally {
+          // Reset button state
+          submitBtn.textContent = originalText;
+          submitBtn.disabled = false;
         }
       };
       </script>

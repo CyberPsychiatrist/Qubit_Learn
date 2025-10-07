@@ -1,17 +1,20 @@
 
 # main.py
 from fastapi import Body
-from fastapi import FastAPI, Request, Form, Depends, status
+from fastapi import FastAPI, Request, Form, Depends, status, HTTPException
 from fastapi.responses import HTMLResponse, RedirectResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.cors import CORSMiddleware
 from starlette.middleware.sessions import SessionMiddleware
 from fastapi.templating import Jinja2Templates
 from pathlib import Path
+from pydantic import BaseModel, EmailStr, Field
 import requests
 import os
+import re
 from FastAPI_backend.api import router as api_router
 from dotenv import load_dotenv
+from intasend import APIService
 
 
 # Load environment variables
@@ -20,13 +23,44 @@ load_dotenv()
 # Import DB
 from FastAPI_backend.db import SupaDB
 
-# IntaSend payment initiation endpoint
-from services.intasend_client import intasend
+# IntaSend credentials
+INTASEND_SECRET_TOKEN = os.getenv("INTASEND_SECRET_TOKEN")
+INTASEND_PUBLISHABLE_KEY = os.getenv("INTASEND_PUBLISHABLE_KEY")
+TEST_MODE = os.getenv("INTASEND_TEST_MODE", "true").lower() in ("1", "true", "yes")
+
+if not INTASEND_SECRET_TOKEN or not INTASEND_PUBLISHABLE_KEY:
+    raise RuntimeError("Missing IntaSend credentials in environment variables.")
+
+# Initialize IntaSend SDK
+service = APIService(
+    token=INTASEND_SECRET_TOKEN,
+    publishable_key=INTASEND_PUBLISHABLE_KEY,
+    test=TEST_MODE,
+)
+
+# Sanitize API reference helper
+def sanitize_api_ref(text: str) -> str:
+    clean = re.sub(r"[^a-zA-Z0-9_\- ]", "-", text)
+    return clean[:30]
+
 
 # Base paths
 BASE_DIR = Path(__file__).resolve().parent
 ROOT_DIR = BASE_DIR.parent
 FRONTEND_DIR = ROOT_DIR / "frontend"
+
+# Pydantic models for requests
+class STKDonationRequest(BaseModel):
+    email: EmailStr
+    phone: str = Field(..., pattern=r"^2547\d{8}$", description="Safaricom MSISDN format e.g. 254712345678")
+    amount: float = Field(gt=0)
+    note: str = None
+    currency: str = "KES"
+
+class CheckoutDonationRequest(BaseModel):
+    email: EmailStr
+    amount: float = Field(gt=0)
+    currency: str = Field(default="KES", description="Currency code")
 
 # Initialize FastAPI app
 app = FastAPI(title="QubitLearn Backend")
@@ -158,11 +192,27 @@ async def signup_user(
 ):
     """Handle user signup."""
     try:
-        existing = db.get_user_by_email(email)
-        if existing:
+        # Check for existing email
+        existing_email = db.get_user_by_email(email)
+        if existing_email:
             return templates.TemplateResponse(
                 "signup.html",
                 {"request": request, "error": "User with this email already exists."},
+            )
+
+        # Check for existing username
+        try:
+            existing_username = db.client.table("users").select("id").eq("username", username).limit(1).execute()
+            if existing_username.data:
+                return templates.TemplateResponse(
+                    "signup.html",
+                    {"request": request, "error": "Username is already taken. Please choose another."},
+                )
+        except Exception as e:
+            print(f"❌ Error checking username: {e}")
+            return templates.TemplateResponse(
+                "signup.html",
+                {"request": request, "error": "Error checking username. Please try again."},
             )
 
         new_user = db.signup_user(email, password, full_name)
@@ -252,8 +302,8 @@ def add_flashcard_page(request: Request, user: dict = Depends(require_login)):
 @app.get("/api/flashcards")
 async def api_get_flashcards():
     try:
-        cards = db.client.table("cards").select("*").execute()
-        return {"flashcards": getattr(cards, "data", [])}
+        cards = db.get_all_cards()
+        return {"flashcards": cards}
     except Exception as e:
         return {"flashcards": [], "error": str(e)}
     
@@ -272,33 +322,104 @@ def paraphraser_page(request: Request, user: dict = Depends(require_login)):
     return templates.TemplateResponse("paraphraser.html", {"request": request, "user": user})
 
 # IntaSend payment initiation endpoint
-@app.post("/api/initiate_payment")
-async def initiate_payment(
-    request: Request,
-    amount: float = Form(...),
-    email: str = Form(...),
-    phone: str = Form(None),
-    method: str = Form(...)
-):
-    """Initiate IntaSend card or M-Pesa STK payment."""
+@app.post("/donate/mpesa-stk")
+async def donate_mpesa_stk(body: STKDonationRequest):
     try:
-        if method == "card":
-            resp = create_card_checkout(email=email, amount=amount, currency="KES", narrative="Donation")
-            return {"checkout_url": resp.get("url")}
-        elif method == "mpesa":
-            if not phone:
-                return {"error": "Phone number required for M-Pesa payments."}
-            resp = intasend.collect.mpesa_stk_push(
-                phone_number=phone,
-                amount=amount,
-                currency="KES",
-                narrative="Donation"
-            )
-            return {"status": resp["status"], "invoice_id": resp["invoice_id"]}
-        else:
-            return {"error": "Invalid payment method."}
+        # Validate required fields
+        if not body.email or not body.phone or not body.amount:
+            raise HTTPException(status_code=400, detail="Email, phone, and amount are required")
+        
+        if body.amount <= 0:
+            raise HTTPException(status_code=400, detail="Amount must be greater than 0")
+        
+        # Validate phone format
+        if not re.match(r"^2547\d{8}$", body.phone):
+            raise HTTPException(status_code=400, detail="Phone number must be in Safaricom MSISDN format: 254712345678")
+
+        email_prefix = body.email.split("@")[0]
+        api_ref = sanitize_api_ref(f"don-{email_prefix}-{int(body.amount*100)}")
+
+        print(f"[DEBUG] Initiating M-Pesa STK push: amount={body.amount}, phone={body.phone}, email={body.email}")
+        
+        resp = service.collect.mpesa_stk_push(
+            amount=body.amount,
+            phone_number=body.phone.strip(),
+            api_ref=api_ref,
+            email=body.email,
+            narrative=body.note or "Donation"
+        )
+        
+        print(f"[DEBUG] IntaSend response: {resp}")
+        
+        data = getattr(resp, "data", {}) or getattr(resp, "__dict__", {}) or resp
+
+        donation_id = (
+            data.get("invoice_id")
+            or data.get("id")
+            or data.get("payment_id")
+            or data.get("tracking_id")
+            or (data.get("invoice", {}) or {}).get("invoice_id")
+        )
+        
+        if not donation_id:
+            print(f"[ERROR] IntaSend STK response missing donation ID fields: {data}")
+            raise HTTPException(status_code=400, detail=f"IntaSend STK response missing donation ID fields: {data}")
+
+        # TODO: Add donation record to DB if needed
+
+        return {"status": "PENDING", "donation_id": donation_id, "message": "STK Push sent. Confirm on your phone."}
+    except HTTPException:
+        raise
     except Exception as e:
-        return {"error": str(e)}
+        print(f"[ERROR] M-Pesa STK donation failed: {str(e)}")
+        raise HTTPException(status_code=400, detail=f"Payment initiation failed: {str(e)}")
+
+@app.post("/donate/checkout")
+async def donate_checkout(body: CheckoutDonationRequest):
+    try:
+        # Validate required fields
+        if not body.email or not body.amount:
+            raise HTTPException(status_code=400, detail="Email and amount are required")
+        
+        if body.amount <= 0:
+            raise HTTPException(status_code=400, detail="Amount must be greater than 0")
+
+        email_prefix = body.email.split("@")[0]
+        api_ref = sanitize_api_ref(f"don-{email_prefix}-{body.currency.lower()}-{int(body.amount*100)}")
+
+        print(f"[DEBUG] Initiating card checkout: amount={body.amount}, email={body.email}, currency={body.currency}")
+        
+        resp = service.collect.checkout(
+            amount=body.amount,
+            currency=body.currency,
+            email=body.email,
+            api_ref=api_ref,
+            narrative="Donation"
+        )
+        
+        print(f"[DEBUG] IntaSend checkout response: {resp}")
+        
+        data = getattr(resp, "data", {}) or getattr(resp, "__dict__", {}) or resp
+
+        donation_id = (
+            data.get("id")
+            or data.get("invoice_id")
+            or (data.get("invoice", {}) or {}).get("invoice_id")
+        )
+        checkout_url = data.get("url") or data.get("checkout_url")
+
+        if not (donation_id and checkout_url):
+            print(f"[ERROR] IntaSend checkout response missing fields: {data}")
+            raise HTTPException(status_code=400, detail=f"IntaSend checkout response missing fields: {data}")
+
+        # TODO: Add donation record to DB if needed
+
+        return {"donation_id": donation_id, "checkout_url": checkout_url}
+    except HTTPException:
+        raise
+    except Exception as e:
+        print(f"[ERROR] Card checkout donation failed: {str(e)}")
+        raise HTTPException(status_code=400, detail=f"Payment initiation failed: {str(e)}")
     
 @app.get("/health")
 def health_check():
