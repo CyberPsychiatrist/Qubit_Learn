@@ -12,7 +12,7 @@ from pydantic import BaseModel, EmailStr, Field
 import requests
 import os
 import re
-from FastAPI_backend.api import router as api_router
+from api import router as api_router
 from dotenv import load_dotenv
 from intasend import APIService
 
@@ -21,7 +21,7 @@ from intasend import APIService
 load_dotenv()
 
 # Import DB
-from FastAPI_backend.db import SupaDB
+from db import SupaDB
 
 # IntaSend credentials
 INTASEND_SECRET_TOKEN = os.getenv("INTASEND_SECRET_TOKEN")
